@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Finanzas</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="icon" href="icons/favicon-16.png" sizes="16x16">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2E3358">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#F1ECE0;
+    --paper-deep:#E8E1D2;
+    --ink:#221F1A;
+    --ink-soft:#5A554A;
+    --indigo:#2E3358;
+    --indigo-soft:#DADCEA;
+    --berry:#A83E5D;
+    --berry-soft:#F0DCE2;
+    --lime:#8DA34A;
+    --line:#D9D1BE;
+    --white:#FBF9F4;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px;}
+
+  header.hero{
+    padding:8px 0 32px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:28px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:clamp(32px,7vw,46px);
+    line-height:1.02;
+    margin:0 0 18px;
+    letter-spacing:-.01em;
+  }
+  .total-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .total-label{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);}
+  .total-figure{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(30px,6vw,42px);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* wallets */
+  .wallets{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:30px;border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative;}
+  .wallet{padding:22px 20px;position:relative;background:var(--white);}
+  .wallet.essentials{background:var(--indigo-soft);}
+  .wallet.personal{background:var(--berry-soft);}
+  .wallets::after{
+    content:"";
+    position:absolute;top:0;bottom:0;left:50%;width:0;
+    border-left:2px dashed rgba(34,31,26,.22);
+  }
+  .stamp{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.06em;
+    padding:3px 9px;
+    border-radius:20px;
+    transform:rotate(-2deg);
+    margin-bottom:10px;
+  }
+  .wallet.essentials .stamp{background:var(--indigo);color:var(--white);}
+  .wallet.personal .stamp{background:var(--berry);color:var(--white);}
+  .wallet-name{
+    font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin:0 0 4px;
+  }
+  .wallet-figure{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:clamp(20px,4vw,26px);
+    font-variant-numeric:tabular-nums;
+  }
+  .wallet-neg{color:var(--berry);}
+
+  /* card / section shell */
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 20px;
+    margin-bottom:22px;
+  }
+  .section-title{
+    font-family:'Fraunces',serif;font-weight:600;font-size:20px;margin:0 0 16px;
+  }
+
+  /* form */
+  .add-form{display:flex;flex-direction:column;gap:12px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:5px;}
+  input, select{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input:focus, select:focus, button:focus{
+    outline:2px solid var(--indigo);outline-offset:1px;
+  }
+  .type-toggle{display:flex;gap:8px;}
+  .type-toggle button{
+    flex:1;padding:11px 10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--paper);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
+    cursor:pointer;color:var(--ink-soft);
+  }
+  .type-toggle button.active-ingreso{background:var(--lime);color:var(--white);border-color:var(--lime);}
+  .type-toggle button.active-gasto{background:var(--berry);color:var(--white);border-color:var(--berry);}
+  .pocket-toggle{display:flex;gap:8px;}
+  .pocket-toggle button{
+    flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--paper);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-soft);
+  }
+  .pocket-toggle button.active{background:var(--indigo);color:var(--white);border-color:var(--indigo);}
+  .pocket-toggle button.active.personal-active{background:var(--berry);border-color:var(--berry);}
+  .submit-btn{
+    margin-top:4px;
+    padding:13px;
+    border:none;border-radius:8px;
+    background:var(--ink);color:var(--white);
+    font-family:'Inter',sans-serif;font-weight:600;font-size:15px;
+    cursor:pointer;
+  }
+  .submit-btn:disabled{opacity:.5;cursor:default;}
+
+  /* transactions list */
+  .tx-list{display:flex;flex-direction:column;gap:0;}
+  .tx-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 0;border-bottom:1px solid var(--line);gap:10px;
+  }
+  .tx-row:last-child{border-bottom:none;}
+  .tx-left{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .tx-desc{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .tx-amount{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14.5px;white-space:nowrap;}
+  .tx-amount.pos{color:var(--lime);}
+  .tx-amount.neg{color:var(--berry);}
+  .tx-del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;padding:4px 6px;}
+  .tx-del:hover{color:var(--berry);}
+  .empty{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);padding:10px 0;}
+  .show-more-btn{
+    display:block;width:100%;margin-top:12px;padding:10px;
+    background:var(--paper);border:1px solid var(--line);border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--ink-soft);
+    cursor:pointer;letter-spacing:.03em;
+  }
+  .show-more-btn:hover{background:var(--paper-deep);color:var(--ink);}
+
+  .charts-grid{display:grid;grid-template-columns:1fr;gap:26px;}
+  @media(min-width:720px){.charts-grid{grid-template-columns:1fr 1fr;}}
+  .chart-box{position:relative;min-height:220px;}
+  .chart-heading{font-family:'Fraunces',serif;font-weight:600;font-size:15px;margin:0 0 12px;text-align:center;}
+
+  .chart-legend{display:flex;justify-content:center;gap:16px;margin-bottom:14px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;}
+
+  .bar-chart{display:flex;align-items:flex-end;gap:10px;height:170px;padding:0 2px;}
+  .bar-month{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;}
+  .bar-pair{display:flex;align-items:flex-end;gap:3px;height:100%;width:100%;justify-content:center;}
+  .bar{width:12px;border-radius:3px 3px 0 0;min-height:2px;transition:height .2s;}
+  .bar.ingreso{background:var(--lime);}
+  .bar.gasto{background:var(--berry);}
+  .bar-month-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);white-space:nowrap;}
+
+  .donut-wrap{position:relative;width:150px;height:150px;margin:0 auto 18px;}
+  .donut{width:100%;height:100%;border-radius:50%;}
+  .donut-center{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:64%;height:64%;background:var(--white);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:6px;
+  }
+  .pie-legend{display:flex;flex-direction:column;gap:7px;}
+  .legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .legend-name{flex:1;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .legend-value{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+
+  .loading{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);padding:40px 0;text-align:center;}
+
+  /* cierre de mes */
+  .hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .hero-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .ghost-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+    background:none;border:1px solid var(--ink);color:var(--ink);
+    padding:8px 14px;border-radius:20px;cursor:pointer;white-space:nowrap;
+  }
+  .ghost-btn:hover{background:var(--ink);color:var(--white);}
+  .close-panel{border:1px dashed var(--indigo);}
+  .close-summary{font-size:14px;line-height:1.6;margin:0 0 14px;}
+  .close-summary b{font-family:'IBM Plex Mono',monospace;}
+  .close-actions{display:flex;gap:10px;margin-top:14px;}
+  .close-actions button{flex:1;}
+  .cancel-btn{
+    background:var(--paper);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:13px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;cursor:pointer;
+  }
+
+  /* historial */
+  .history-row{padding:14px 0;border-bottom:1px solid var(--line);}
+  .history-row:last-child{border-bottom:none;}
+  .history-dates{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em;}
+  .history-figures{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;}
+  .history-total{font-family:'Fraunces',serif;font-weight:600;font-size:17px;}
+  .history-meta{font-size:12.5px;color:var(--ink-soft);}
+
+  /* login */
+  .auth-card{max-width:400px;margin:14vh auto 0;}
+  .auth-card h1{font-size:30px;margin-bottom:6px;}
+  .auth-card .eyebrow{margin-bottom:16px;}
+  .auth-card label{margin-top:12px;}
+  .auth-card label:first-of-type{margin-top:0;}
+
+  @media(max-width:520px){
+    .row2{grid-template-columns:1fr;}
+    .wallets{grid-template-columns:1fr;}
+    .wallets::after{display:none;}
+    .auth-card{margin-top:8vh;}
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE INICIO DE SESIÓN -->
+<div class="wrap" id="authWrap">
+  <div class="card auth-card">
+    <p class="eyebrow">Mis finanzas</p>
+    <h1 id="authTitle">Inicia sesión</h1>
+    <label for="authEmail">Correo</label>
+    <input id="authEmail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email">
+    <label for="authPassword">Contraseña</label>
+    <input id="authPassword" type="password" placeholder="Mínimo 6 caracteres" autocomplete="current-password">
+    <p id="authError" style="display:none;color:var(--berry);font-size:13px;font-family:'IBM Plex Mono',monospace;margin:10px 0 0;"></p>
+    <button class="submit-btn" id="btnLogin" style="margin-top:16px;">Iniciar sesión</button>
+    <button class="cancel-btn" id="btnRegister" style="margin-top:10px;width:100%;">Crear cuenta nueva</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="wrap" id="app" style="display:none;">
+  <header class="hero">
+    <div class="hero-top">
+      <div>
+        <p class="eyebrow" id="periodLabel">Registro · 60% esenciales / 40% personal</p>
+        <h1>Mis finanzas</h1>
+      </div>
+      <div class="hero-actions">
+        <button class="ghost-btn" id="btnOpenClose">Cerrar mes</button>
+        <button class="ghost-btn" id="btnOpenAccount">Cuenta</button>
+        <button class="ghost-btn" id="btnLogout">Salir</button>
+      </div>
+    </div>
+    <div class="total-row">
+      <span class="total-label">Total disponible</span>
+      <span class="total-figure" id="totalFigure">—</span>
+    </div>
+  </header>
+
+  <div class="card close-panel" id="accountPanel" style="display:none;">
+    <p class="section-title">Tu cuenta</p>
+    <p class="close-summary">Correo: <b id="accountEmail">—</b></p>
+    <p id="accountMsg" style="display:none;font-size:13px;font-family:'IBM Plex Mono',monospace;margin:0 0 12px;"></p>
+    <div class="close-actions">
+      <button class="cancel-btn" id="btnCloseAccount">Cerrar</button>
+      <button class="submit-btn" id="btnResetPassword">Enviar enlace para cambiar contraseña</button>
+    </div>
+  </div>
+
+  <div class="card close-panel" id="closePanel" style="display:none;">
+    <p class="section-title">Cerrar el mes actual</p>
+    <p class="close-summary" id="closeSummary"></p>
+    <label for="newOpeningInput">Monto inicial del nuevo periodo (COP)</label>
+    <input id="newOpeningInput" type="text" inputmode="numeric" placeholder="0">
+    <p id="closeError" style="display:none;color:var(--berry);font-size:13px;font-family:'IBM Plex Mono',monospace;margin:10px 0 0;"></p>
+    <div class="close-actions">
+      <button class="cancel-btn" id="btnCancelClose">Cancelar</button>
+      <button class="submit-btn" id="btnConfirmClose">Confirmar cierre</button>
+    </div>
+  </div>
+
+  <div class="wallets">
+    <div class="wallet essentials">
+      <span class="stamp">60% · ESENCIALES</span>
+      <p class="wallet-name">Esenciales</p>
+      <p class="wallet-figure" id="essentialsFigure">—</p>
+    </div>
+    <div class="wallet personal">
+      <span class="stamp">40% · PERSONAL</span>
+      <p class="wallet-name">Personal</p>
+      <p class="wallet-figure" id="personalFigure">—</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Registrar movimiento</p>
+    <div class="add-form" id="txForm">
+      <div class="type-toggle">
+        <button type="button" id="btnIngreso" class="active-ingreso">↑ Ingreso</button>
+        <button type="button" id="btnGasto">↓ Gasto</button>
+      </div>
+
+      <div id="pocketField" style="display:none;">
+        <label>¿De qué bolsillo sale?</label>
+        <div class="pocket-toggle">
+          <button type="button" id="btnPocketEss" class="active">Esenciales</button>
+          <button type="button" id="btnPocketPer">Personal</button>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label for="descInput">Descripción</label>
+          <input id="descInput" type="text" placeholder="Ej: mercado, arriendo, salario…">
+        </div>
+        <div>
+          <label for="amountInput">Valor (COP)</label>
+          <input id="amountInput" type="text" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+      <div>
+        <label for="dateInput">Fecha del movimiento</label>
+        <input id="dateInput" type="date">
+      </div>
+      <p id="formError" style="display:none;color:var(--berry);font-size:13px;font-family:'IBM Plex Mono',monospace;margin:0;"></p>
+      <button type="button" class="submit-btn" id="submitBtn">Guardar movimiento</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Movimientos recientes</p>
+    <div class="tx-list" id="txList"><p class="loading">Cargando…</p></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Panorama</p>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <p class="chart-heading">Ingresos vs. gastos por mes</p>
+        <div id="barChartContainer"></div>
+      </div>
+      <div class="chart-box">
+        <p class="chart-heading">En qué se va el dinero</p>
+        <div id="pieChartContainer"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="historyCard" style="display:none;">
+    <p class="section-title">Historial de meses</p>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<script>
+/* ======= CONFIGURACIÓN DE FIREBASE =======
+   Reemplaza este objeto con el que te da tu proyecto de Firebase:
+   Configuración del proyecto (⚙) > Tus apps > app Web > firebaseConfig
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUid = null;
+
+/* ======= ESTADO ======= */
+let transactions = [];
+let periodStart = new Date().toISOString();
+let openingBalance = 0;
+let history = [];
+let currentType = 'ingreso';
+let currentPocket = 'esenciales';
+let visibleCount = 8;
+const PAGE_SIZE = 8;
+
+const cop = n => new Intl.NumberFormat('es-CO', {style:'currency', currency:'COP', maximumFractionDigits:0}).format(n);
+
+/* ======= AUTENTICACIÓN ======= */
+function traducirErrorAuth(code){
+  const map = {
+    'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Intenta iniciar sesión.',
+    'auth/invalid-email':'El correo no es válido.',
+    'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
+    'auth/wrong-password':'Contraseña incorrecta.',
+    'auth/user-not-found':'No existe una cuenta con ese correo.',
+    'auth/invalid-credential':'Correo o contraseña incorrectos.',
+    'auth/missing-password':'Escribe una contraseña.'
+  };
+  return map[code] || 'Ocurrió un error. Intenta de nuevo.';
+}
+
+document.getElementById('btnLogin').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const pw = document.getElementById('authPassword').value;
+  const err = document.getElementById('authError');
+  err.style.display = 'none';
+  try{
+    await auth.signInWithEmailAndPassword(email, pw);
+  }catch(e){
+    err.textContent = traducirErrorAuth(e.code);
+    err.style.display = 'block';
+  }
+});
+
+document.getElementById('btnRegister').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const pw = document.getElementById('authPassword').value;
+  const err = document.getElementById('authError');
+  err.style.display = 'none';
+  try{
+    await auth.createUserWithEmailAndPassword(email, pw);
+  }catch(e){
+    err.textContent = traducirErrorAuth(e.code);
+    err.style.display = 'block';
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', ()=> auth.signOut());
+
+document.getElementById('btnOpenAccount').addEventListener('click', ()=>{
+  const user = auth.currentUser;
+  document.getElementById('accountEmail').textContent = user ? user.email : '—';
+  document.getElementById('accountMsg').style.display = 'none';
+  document.getElementById('accountPanel').style.display = 'block';
+  document.getElementById('accountPanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+document.getElementById('btnCloseAccount').addEventListener('click', ()=>{
+  document.getElementById('accountPanel').style.display = 'none';
+});
+
+document.getElementById('btnResetPassword').addEventListener('click', async ()=>{
+  const user = auth.currentUser;
+  const msg = document.getElementById('accountMsg');
+  if(!user || !user.email) return;
+  try{
+    await auth.sendPasswordResetEmail(user.email);
+    msg.style.color = 'var(--lime)';
+    msg.textContent = `Te enviamos un enlace a ${user.email} para cambiar tu contraseña. Revisa tu correo (y la carpeta de spam).`;
+    msg.style.display = 'block';
+  }catch(e){
+    msg.style.color = 'var(--berry)';
+    msg.textContent = traducirErrorAuth(e.code);
+    msg.style.display = 'block';
+  }
+});
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    currentUid = user.uid;
+    document.getElementById('authWrap').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadData();
+  } else {
+    currentUid = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('authWrap').style.display = 'block';
+  }
+});
+
+/* ======= DATOS (Firestore) ======= */
+async function loadData(){
+  try{
+    const doc = await db.collection('finanzas').doc(currentUid).get();
+    if(doc.exists){
+      const data = doc.data();
+      transactions = data.transactions || [];
+      periodStart = data.periodStart || new Date().toISOString();
+      openingBalance = data.openingBalance || 0;
+      history = data.history || [];
+    } else {
+      transactions = [];
+      periodStart = new Date().toISOString();
+      openingBalance = 0;
+      history = [];
+    }
+  }catch(e){
+    console.error('No se pudo cargar', e);
+    transactions = [];
+  }
+  visibleCount = PAGE_SIZE;
+  render();
+}
+
+async function saveData(){
+  if(!currentUid) return;
+  try{
+    await db.collection('finanzas').doc(currentUid).set({ transactions, periodStart, openingBalance, history });
+  }catch(e){
+    console.error('No se pudo guardar', e);
+  }
+}
+
+function computeBalances(){
+  let essIncome=0, perIncome=0, essExpense=0, perExpense=0;
+  transactions.forEach(t=>{
+    if(t.type==='ingreso'){
+      essIncome += t.amount*0.6;
+      perIncome += t.amount*0.4;
+    } else {
+      if(t.pocket==='esenciales') essExpense += t.amount;
+      else perExpense += t.amount;
+    }
+  });
+  return {
+    essentials: openingBalance*0.6 + essIncome - essExpense,
+    personal: openingBalance*0.4 + perIncome - perExpense
+  };
+}
+
+/* ======= FORMULARIO ======= */
+function setType(type){
+  currentType = type;
+  document.getElementById('btnIngreso').classList.toggle('active-ingreso', type==='ingreso');
+  document.getElementById('btnGasto').classList.toggle('active-gasto', type==='gasto');
+  document.getElementById('pocketField').style.display = type==='gasto' ? 'block' : 'none';
+}
+function setPocket(p){
+  currentPocket = p;
+  document.getElementById('btnPocketEss').classList.toggle('active', p==='esenciales');
+  document.getElementById('btnPocketEss').classList.toggle('personal-active', false);
+  document.getElementById('btnPocketPer').classList.toggle('active', p==='personal');
+  document.getElementById('btnPocketPer').classList.toggle('personal-active', p==='personal');
+}
+
+document.getElementById('btnIngreso').addEventListener('click', ()=>setType('ingreso'));
+document.getElementById('btnGasto').addEventListener('click', ()=>setType('gasto'));
+document.getElementById('btnPocketEss').addEventListener('click', ()=>setPocket('esenciales'));
+document.getElementById('btnPocketPer').addEventListener('click', ()=>setPocket('personal'));
+
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  const desc = document.getElementById('descInput').value.trim();
+  const rawAmount = document.getElementById('amountInput').value.replace(/[^0-9]/g, '');
+  const amount = parseFloat(rawAmount);
+  const dateValue = document.getElementById('dateInput').value;
+  const errorEl = document.getElementById('formError');
+  if(!desc || !amount || amount<=0){
+    errorEl.textContent = 'Escribe una descripción y un valor mayor a 0.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  const now = new Date();
+  const txDate = dateValue
+    ? new Date(`${dateValue}T${now.toTimeString().slice(0,8)}`).toISOString()
+    : now.toISOString();
+
+  transactions.unshift({
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    type: currentType,
+    pocket: currentType==='gasto' ? currentPocket : null,
+    desc,
+    amount,
+    date: txDate
+  });
+  await saveData();
+  document.getElementById('descInput').value='';
+  document.getElementById('amountInput').value='';
+  document.getElementById('dateInput').value = new Date().toISOString().slice(0,10);
+  render();
+
+  btn.disabled = false; btn.textContent = 'Guardar movimiento';
+});
+
+async function deleteTx(id){
+  transactions = transactions.filter(t=>t.id!==id);
+  await saveData();
+  render();
+}
+
+/* ======= CIERRE DE MES ======= */
+document.getElementById('btnOpenClose').addEventListener('click', ()=>{
+  const {essentials, personal} = computeBalances();
+  const total = essentials + personal;
+  document.getElementById('closeSummary').innerHTML =
+    `Vas a cerrar el periodo iniciado el <b>${formatDate(periodStart)}</b> con ${transactions.length} movimiento(s).<br>
+     Saldo final: <b>${cop(total)}</b> (Esenciales ${cop(essentials)} · Personal ${cop(personal)}).<br>
+     Este periodo quedará guardado en el historial.`;
+  document.getElementById('newOpeningInput').value = '';
+  document.getElementById('closeError').style.display = 'none';
+  document.getElementById('closePanel').style.display = 'block';
+  document.getElementById('closePanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+document.getElementById('btnCancelClose').addEventListener('click', ()=>{
+  document.getElementById('closePanel').style.display = 'none';
+});
+
+document.getElementById('btnConfirmClose').addEventListener('click', async ()=>{
+  const raw = document.getElementById('newOpeningInput').value.replace(/[^0-9]/g, '');
+  const newOpening = raw === '' ? 0 : parseFloat(raw);
+  const errorEl = document.getElementById('closeError');
+  if(isNaN(newOpening) || newOpening<0){
+    errorEl.textContent = 'Escribe un monto válido (o deja 0 si vas a empezar sin nada).';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const {essentials, personal} = computeBalances();
+  history.unshift({
+    startDate: periodStart,
+    endDate: new Date().toISOString(),
+    openingBalance,
+    transactions,
+    closingEssentials: essentials,
+    closingPersonal: personal
+  });
+
+  transactions = [];
+  periodStart = new Date().toISOString();
+  openingBalance = newOpening;
+  visibleCount = PAGE_SIZE;
+
+  await saveData();
+  document.getElementById('closePanel').style.display = 'none';
+  render();
+});
+
+/* ======= RENDER ======= */
+function formatDate(iso){
+  return new Date(iso).toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function renderWallets(){
+  const {essentials, personal} = computeBalances();
+  document.getElementById('totalFigure').textContent = cop(essentials+personal);
+  const essEl = document.getElementById('essentialsFigure');
+  const perEl = document.getElementById('personalFigure');
+  essEl.textContent = cop(essentials);
+  perEl.textContent = cop(personal);
+  essEl.classList.toggle('wallet-neg', essentials<0);
+  perEl.classList.toggle('wallet-neg', personal<0);
+  document.getElementById('periodLabel').textContent = `Periodo iniciado ${formatDate(periodStart)} · 60% esenciales / 40% personal`;
+}
+
+function renderList(){
+  const list = document.getElementById('txList');
+  if(transactions.length===0){
+    list.innerHTML = '<p class="empty">Aún no has registrado movimientos. Agrega el primero arriba.</p>';
+    return;
+  }
+  const sorted = [...transactions].sort((a,b)=> new Date(b.date) - new Date(a.date));
+  const shown = sorted.slice(0, visibleCount);
+  const rows = shown.map(t=>{
+    const d = new Date(t.date);
+    const dateStr = d.toLocaleDateString('es-CO', {day:'2-digit', month:'short'});
+    const pocketTag = t.type==='gasto' ? (t.pocket==='esenciales'?'Esenciales':'Personal') : 'Ingreso';
+    const sign = t.type==='ingreso' ? '+' : '−';
+    const cls = t.type==='ingreso' ? 'pos' : 'neg';
+    return `<div class="tx-row">
+      <div class="tx-left">
+        <span class="tx-desc">${escapeHtml(t.desc)}</span>
+        <span class="tx-meta">${dateStr} · ${pocketTag}</span>
+      </div>
+      <span class="tx-amount ${cls}">${sign} ${cop(t.amount)}</span>
+      <button class="tx-del" onclick="deleteTx('${t.id}')" aria-label="Eliminar">✕</button>
+    </div>`;
+  }).join('');
+
+  const remaining = transactions.length - shown.length;
+  const moreBtn = remaining > 0
+    ? `<button class="show-more-btn" id="btnShowMore">Ver más (${remaining} restante${remaining===1?'':'s'})</button>`
+    : (visibleCount > PAGE_SIZE ? `<button class="show-more-btn" id="btnShowLess">Ver menos</button>` : '');
+
+  list.innerHTML = rows + moreBtn;
+
+  const showMoreEl = document.getElementById('btnShowMore');
+  if(showMoreEl) showMoreEl.addEventListener('click', ()=>{ visibleCount += PAGE_SIZE; renderList(); });
+  const showLessEl = document.getElementById('btnShowLess');
+  if(showLessEl) showLessEl.addEventListener('click', ()=>{ visibleCount = PAGE_SIZE; renderList(); });
+}
+
+function escapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function renderCharts(){
+  renderBarChart();
+  renderDonutChart();
+}
+
+function renderBarChart(){
+  const monthly = {};
+  transactions.forEach(t=>{
+    const d = new Date(t.date);
+    const key = d.toLocaleDateString('es-CO', {month:'short', year:'2-digit'});
+    if(!monthly[key]) monthly[key] = {ingreso:0, gasto:0, order:d.getFullYear()*12+d.getMonth()};
+    monthly[key][t.type] += t.amount;
+  });
+  const monthKeys = Object.keys(monthly).sort((a,b)=>monthly[a].order-monthly[b].order).slice(-6);
+  const container = document.getElementById('barChartContainer');
+
+  if(monthKeys.length===0){
+    container.innerHTML = '<p class="empty">Aún no hay datos suficientes para este gráfico.</p>';
+    return;
+  }
+
+  const max = Math.max(1, ...monthKeys.flatMap(k=>[monthly[k].ingreso, monthly[k].gasto]));
+  container.innerHTML = `
+    <div class="chart-legend">
+      <span class="legend-item"><span class="dot" style="background:var(--lime)"></span>Ingresos</span>
+      <span class="legend-item"><span class="dot" style="background:var(--berry)"></span>Gastos</span>
+    </div>
+    <div class="bar-chart">
+      ${monthKeys.map(k=>`
+        <div class="bar-month">
+          <div class="bar-pair">
+            <div class="bar ingreso" style="height:${Math.max(2,(monthly[k].ingreso/max*100)).toFixed(1)}%" title="Ingresos ${cop(monthly[k].ingreso)}"></div>
+            <div class="bar gasto" style="height:${Math.max(2,(monthly[k].gasto/max*100)).toFixed(1)}%" title="Gastos ${cop(monthly[k].gasto)}"></div>
+          </div>
+          <span class="bar-month-label">${k}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDonutChart(){
+  const cats = {};
+  transactions.filter(t=>t.type==='gasto').forEach(t=>{
+    const key = (t.desc || 'otros').trim().toLowerCase();
+    cats[key] = (cats[key]||0) + t.amount;
+  });
+  const container = document.getElementById('pieChartContainer');
+  let entries = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+
+  if(entries.length===0){
+    container.innerHTML = '<p class="empty">Aún no hay gastos registrados.</p>';
+    return;
+  }
+
+  let top = entries.slice(0,6);
+  const restSum = entries.slice(6).reduce((s,e)=>s+e[1],0);
+  if(restSum>0) top.push(['otros', restSum]);
+  const total = top.reduce((s,e)=>s+e[1],0);
+  const palette = ['#2E3358','#A83E5D','#8DA34A','#D9A441','#5A7D9A','#8C5E8A','#B7AE9C'];
+
+  let acc = 0;
+  const stops = top.map((e,i)=>{
+    const startPct = acc/total*100;
+    acc += e[1];
+    const endPct = acc/total*100;
+    return `${palette[i%palette.length]} ${startPct.toFixed(2)}% ${endPct.toFixed(2)}%`;
+  }).join(', ');
+
+  container.innerHTML = `
+    <div class="donut-wrap">
+      <div class="donut" style="background:conic-gradient(${stops})"></div>
+      <div class="donut-center">${cop(total)}</div>
+    </div>
+    <div class="pie-legend">
+      ${top.map((e,i)=>`
+        <div class="legend-row">
+          <span class="dot" style="background:${palette[i%palette.length]}"></span>
+          <span class="legend-name">${escapeHtml(e[0])}</span>
+          <span class="legend-value">${cop(e[1])}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderHistory(){
+  const card = document.getElementById('historyCard');
+  const list = document.getElementById('historyList');
+  if(history.length===0){
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  list.innerHTML = history.map(h=>{
+    const total = (h.closingEssentials||0) + (h.closingPersonal||0);
+    return `<div class="history-row">
+      <p class="history-dates">${formatDate(h.startDate)} → ${formatDate(h.endDate)}</p>
+      <div class="history-figures">
+        <span class="history-total">${cop(total)}</span>
+        <span class="history-meta">${h.transactions.length} movimiento(s) · empezó con ${cop(h.openingBalance||0)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render(){
+  renderWallets();
+  renderList();
+  renderHistory();
+  try{
+    renderCharts();
+  }catch(err){
+    console.error('No se pudieron dibujar los gráficos', err);
+  }
+}
+
+document.getElementById('dateInput').value = new Date().toISOString().slice(0,10);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(err=>{
+      console.error('No se pudo registrar el service worker', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
